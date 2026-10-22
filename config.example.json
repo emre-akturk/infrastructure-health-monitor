@@ -1,0 +1,28 @@
+{
+  "mail_subject_prefix": "Infrastructure Health Report",
+  "send_only_on_alert": false,
+  "ping_hosts": [
+    {
+      "name": "Localhost",
+      "host": "127.0.0.1",
+      "timeout_ms": 1500
+    }
+  ],
+  "websites": [
+    {
+      "name": "Example Website",
+      "url": "https://example.com"
+    }
+  ],
+  "disk_paths": [
+    {
+      "name": "Application Directory",
+      "path": ".",
+      "warn_free_percent": 15
+    }
+  ],
+  "backup_folders": [],
+  "windows_services": [],
+  "linux_servers": []
+}
+

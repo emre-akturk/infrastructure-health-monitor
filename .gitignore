@@ -1,0 +1,30 @@
+# Local configuration and secrets
+config.json
+.env
+.env.*
+ssh/
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+id_ed25519*
+
+# Runtime output
+*.log
+logs/
+reports/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local backups and editor files
+*.bak
+*.bak_*
+*_yedek_*
+.idea/
+.vscode/
+
