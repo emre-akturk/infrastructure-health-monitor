@@ -37,6 +37,158 @@ def load_config(config_file: Path) -> dict:
         return json.load(f)
 
 
+CHECK_SECTIONS = {
+    "ping_hosts": ("host",),
+    "websites": ("url",),
+    "disk_paths": ("path",),
+    "backup_folders": ("path",),
+    "windows_services": ("service",),
+    "linux_servers": ("host", "user"),
+}
+
+
+def _validate_number(
+    section: str,
+    index: int,
+    item: dict,
+    field: str,
+    errors: list[str],
+    minimum: float,
+    maximum: float | None = None,
+    integer: bool = False,
+) -> None:
+    if field not in item:
+        return
+
+    value = item[field]
+    label = f"{section}[{index}].{field}"
+
+    if isinstance(value, bool):
+        errors.append(f"{label} sayısal bir değer olmalıdır")
+        return
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        errors.append(f"{label} sayısal bir değer olmalıdır")
+        return
+
+    if integer and not number.is_integer():
+        errors.append(f"{label} tam sayı olmalıdır")
+        return
+
+    if number < minimum:
+        errors.append(f"{label} en az {minimum:g} olmalıdır")
+    elif maximum is not None and number > maximum:
+        errors.append(f"{label} en fazla {maximum:g} olmalıdır")
+
+
+def validate_config(config: object) -> None:
+    """Validate the complete configuration before any checks are executed."""
+    if not isinstance(config, dict):
+        raise ValueError("Yapılandırmanın kök değeri bir JSON nesnesi olmalıdır")
+
+    errors: list[str] = []
+
+    if "mail_subject_prefix" in config:
+        prefix = config["mail_subject_prefix"]
+        if not isinstance(prefix, str) or not prefix.strip():
+            errors.append("mail_subject_prefix boş olmayan bir metin olmalıdır")
+
+    if "send_only_on_alert" in config and not isinstance(
+        config["send_only_on_alert"], bool
+    ):
+        errors.append("send_only_on_alert true veya false olmalıdır")
+
+    for section, required_fields in CHECK_SECTIONS.items():
+        entries = config.get(section, [])
+
+        if not isinstance(entries, list):
+            errors.append(f"{section} bir liste olmalıdır")
+            continue
+
+        for index, item in enumerate(entries):
+            if not isinstance(item, dict):
+                errors.append(f"{section}[{index}] bir JSON nesnesi olmalıdır")
+                continue
+
+            for field in required_fields:
+                value = item.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    errors.append(
+                        f"{section}[{index}].{field} boş olmayan bir metin olmalıdır"
+                    )
+
+            if "name" in item and (
+                not isinstance(item["name"], str) or not item["name"].strip()
+            ):
+                errors.append(
+                    f"{section}[{index}].name boş olmayan bir metin olmalıdır"
+                )
+
+            if section == "ping_hosts":
+                _validate_number(
+                    section, index, item, "timeout_ms", errors, minimum=1, integer=True
+                )
+            elif section == "disk_paths":
+                _validate_number(
+                    section,
+                    index,
+                    item,
+                    "warn_free_percent",
+                    errors,
+                    minimum=0,
+                    maximum=100,
+                )
+            elif section == "backup_folders":
+                _validate_number(
+                    section,
+                    index,
+                    item,
+                    "warn_older_than_hours",
+                    errors,
+                    minimum=1,
+                    integer=True,
+                )
+                if "recursive" in item and not isinstance(item["recursive"], bool):
+                    errors.append(
+                        f"{section}[{index}].recursive true veya false olmalıdır"
+                    )
+            elif section == "linux_servers":
+                _validate_number(
+                    section,
+                    index,
+                    item,
+                    "port",
+                    errors,
+                    minimum=1,
+                    maximum=65535,
+                    integer=True,
+                )
+                _validate_number(
+                    section,
+                    index,
+                    item,
+                    "timeout_sec",
+                    errors,
+                    minimum=1,
+                    integer=True,
+                )
+                _validate_number(
+                    section,
+                    index,
+                    item,
+                    "warn_free_percent",
+                    errors,
+                    minimum=0,
+                    maximum=100,
+                )
+
+    if errors:
+        details = "\n".join(f"- {error}" for error in errors)
+        raise ValueError(f"Yapılandırma doğrulaması başarısız:\n{details}")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Windows ve Linux sistemleri için altyapı sağlık kontrolü."
@@ -618,6 +770,7 @@ def send_mail(subject: str, body: str) -> None:
 def main() -> None:
     args = parse_args()
     config = load_config(args.config)
+    validate_config(config)
     report, has_alert = build_report(config)
 
     now = datetime.now()
