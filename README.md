@@ -82,7 +82,7 @@ The configuration is validated before any checks run. Invalid section types, mis
 Run the automated tests from the repository root:
 
 ```powershell
-python -m unittest discover -s .\\tests -t . -v
+python -m unittest discover -s .\tests -t . -v
 ```
 
 ## Scheduling
