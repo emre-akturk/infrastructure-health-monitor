@@ -16,6 +16,7 @@ The project uses only the Python standard library and is suitable for scheduled 
 - SMTP email delivery through SSL or STARTTLS
 - Alert-only email mode
 - Safe local test mode without sending email
+- Configuration validation before checks and email delivery
 
 ## Security model
 
@@ -71,6 +72,18 @@ The following arrays are optional and may be empty:
 - `linux_servers`
 
 Start with `config.example.json`, then add only the checks required by your environment.
+
+## Configuration validation
+
+The configuration is validated before any checks run. Invalid section types, missing required fields, incorrect boolean values, and out-of-range numeric settings are reported together. If validation fails, the program exits with a non-zero status without running checks or sending email.
+
+## Testing
+
+Run the automated tests from the repository root:
+
+```powershell
+python -m unittest discover -s .\\tests -t . -v
+```
 
 ## Scheduling
 
